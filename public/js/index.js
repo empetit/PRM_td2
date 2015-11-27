@@ -54,7 +54,7 @@ $(document).ready(function() {
                 $("#result").html('Vous n\'êtes jamais venu :)')
             }else{
                 $("#result").css({'color':'orange'})
-                $("#result").html('Vous êtes déjà venu :(')
+                $("#result").html('Vous êtes déjà venu :(<br/> Taux de correspondance : '+reponse.corresp+'%<br/>Dernière visite : '+ new Date(reponse.last).toLocaleString())
             }
         });
 

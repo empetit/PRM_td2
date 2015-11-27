@@ -10,11 +10,19 @@ var bodyParser = require('body-parser')
 var loki = require('lokijs')
 var db = new loki('database/browsers.json')
 var visiteurs = null
+var visites = null;
 
 db.loadDatabase({}, function () {
-   visiteurs = db.getCollection('users')
+    visiteurs = db.getCollection('users')
   	if(!visiteurs){
   		visiteurs = db.addCollection('users')
+  	}
+
+    visites = db.getCollection('visites')
+  	if(!visites){
+  		visites = db.addCollection('visites')
+		visites.insert({id:"0", count: 0})
+		db.saveDatabase()
   	}
 });
 
@@ -83,7 +91,23 @@ app.get('/all', function(req, res) {
 	res.json(data)
 })
 
+
+app.get('/stats', function(req, res) {
+	var data = visiteurs.find({})
+
+	var v = visites.findOne({id:"0"})
+
+	var page ="<h1>Statistiques</h1><div><p>Nombre de visiteurs uniques : "+data.length+"</p><p>Nombre de visites : "+v.count+"</p></div>"
+	
+	res.send(page)
+	//res.json(data)
+})
+
 app.post('/unique', function(req, res) {
+
+	var v = visites.findOne({id:"0"})
+	v.count++
+	db.saveDatabase();
 
 	var headers = req.headers
 
@@ -104,16 +128,49 @@ app.post('/unique', function(req, res) {
 		}
 	}
 
-	var existe = visiteurs.find({
+	var existe = visiteurs.findOne({
 		'cle': cle
 	})
 
-	if (existe.length > 0) {
+	if (existe) {
 		//result = 'Déjà venu !<br>Info : '+cle+' ('+(Buffer.byteLength(cle, 'utf8'))+' bits) : '+valeur+' ('+(Buffer.byteLength(valeur, 'utf8'))+' bits)'
 		console.log('Deja venu')
+
+		var item1 = JSON.parse(valeur)
+		var item2 = existe.valeur
+
+		var k = Object.keys(item1)
+
+		var corresp = 0
+
+		var valTestees = 0
+
+		for( var i in k){
+			var key = k[i]
+			
+			if(item1[key] !="functionValue"){
+				valTestees++
+				console.log(key + ' => '+  JSON.stringify(item1[key]) +' !== '+ JSON.stringify(item2[key]))
+
+				if( JSON.stringify(item1[key]) === JSON.stringify(item2[key]) ){
+					corresp++ 
+					console.log("\ttrue")
+				}else{
+					console.log("\tfalse")
+				}
+			}
+		}
+		
+		corresp = (corresp / valTestees) * 100
+
+		console.log("Correspondance : "+corresp)
+		result.corresp = corresp
 		result.unique = false
+		result.last = new Date()
+		existe.date = new Date()
+		db.saveDatabase()
 	} else {
-		visiteurs.insert({cle: cle,valeur: JSON.parse(valeur)})
+		visiteurs.insert({cle: cle, valeur: JSON.parse(valeur), date: new Date()})
 		db.saveDatabase()
 		//result = 'Nouveau visiteur !<br>Info : '+cle+' : '+valeur
 		console.log('Nouveau visiteur');
